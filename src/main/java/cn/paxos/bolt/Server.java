@@ -8,7 +8,7 @@ import java.nio.channels.AsynchronousServerSocketChannel;
 import java.util.List;
 import java.util.concurrent.Executors;
 
-import cn.paxos.bolt.handler.RequestHandler;
+import cn.paxos.bolt.responder.Responder;
 
 public class Server
 {
@@ -17,7 +17,7 @@ public class Server
   private static final int threadPoolSize = Runtime.getRuntime().availableProcessors();
 
   private int port;
-  private List<RequestHandler> requestHandlers;
+  private List<Responder> responders;
   
   public void start() throws IOException
   {
@@ -26,7 +26,7 @@ public class Server
     serverSocketChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
     serverSocketChannel.setOption(StandardSocketOptions.SO_RCVBUF, BUFFER_SIZE);
     serverSocketChannel.bind(new InetSocketAddress(port), 0);
-    AcceptCompletionHandler acceptCompletionHandler = new AcceptCompletionHandler(BUFFER_SIZE, serverSocketChannel, requestHandlers);
+    AcceptCompletionHandler acceptCompletionHandler = new AcceptCompletionHandler(BUFFER_SIZE, serverSocketChannel, responders);
     serverSocketChannel.accept(null, acceptCompletionHandler);
   }
 
@@ -35,9 +35,9 @@ public class Server
     this.port = port;
   }
 
-  public void setRequestHandlers(List<RequestHandler> requestHandlers)
+  public void setResponders(List<Responder> responders)
   {
-    this.requestHandlers = requestHandlers;
+    this.responders = responders;
   }
 
 }

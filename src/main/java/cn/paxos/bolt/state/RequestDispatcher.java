@@ -3,7 +3,9 @@ package cn.paxos.bolt.state;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.List;
 
-import cn.paxos.bolt.handler.RequestHandler;
+import cn.paxos.bolt.Response;
+import cn.paxos.bolt.responder.Responder;
+import cn.paxos.bolt.responder.preset.DefaultResponder;
 import cn.paxos.jam.Event;
 import cn.paxos.jam.State;
 import cn.paxos.jam.StateContext;
@@ -15,13 +17,13 @@ public class RequestDispatcher implements Trigger, State
 {
   
   private final AsynchronousSocketChannel asynchronousSocketChannel;
-  private final List<RequestHandler> requestHandlers;
+  private final List<Responder> responders;
 
   public RequestDispatcher(AsynchronousSocketChannel asynchronousSocketChannel,
-      List<RequestHandler> requestHandlers)
+      List<Responder> responders)
   {
     this.asynchronousSocketChannel = asynchronousSocketChannel;
-    this.requestHandlers = requestHandlers;
+    this.responders = responders;
   }
 
   @Override
@@ -42,15 +44,18 @@ public class RequestDispatcher implements Trigger, State
       return this;
     }
     Request request = ((RequestCompletedEvent) event).getRequest();
-    for (RequestHandler requestHandler : requestHandlers)
+    Responder selectedResponder = new DefaultResponder();
+    for (Responder responder : responders)
     {
-      if (!requestHandler.canHandle(request))
+      if (!responder.canHandle(request))
       {
         continue;
       }
-      requestHandler.handle(request, asynchronousSocketChannel);
+      selectedResponder = responder;
       break;
     }
+    Response response = selectedResponder.handle(request);
+    response.write(asynchronousSocketChannel);
     return null;
   }
   

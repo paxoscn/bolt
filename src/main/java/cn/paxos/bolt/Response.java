@@ -16,6 +16,7 @@ public final class Response
   private final long contentLength;
   private final String encoding;
   private final byte[] content;
+  private final StringProvider stringProvider;
   private final BodyWriter bodyWriter;
 
   private Response(int code, String message)
@@ -25,6 +26,7 @@ public final class Response
     this.contentLength = 0;
     this.encoding = "utf-8";
     this.content = null;
+    this.stringProvider = null;
     this.bodyWriter = null;
   }
 
@@ -32,7 +34,6 @@ public final class Response
   {
     this.status = "200 OK";
     this.contentType = "text/html";
-    this.contentLength = 0;
     this.encoding = encoding;
     try
     {
@@ -41,6 +42,19 @@ public final class Response
     {
       throw new IllegalArgumentException(e);
     }
+    this.contentLength = this.content.length;
+    this.stringProvider = null;
+    this.bodyWriter = null;
+  }
+
+  private Response(StringProvider stringProvider)
+  {
+    this.status = "200 OK";
+    this.contentType = null;
+    this.contentLength = 0;
+    this.encoding = null;
+    this.content = null;
+    this.stringProvider = stringProvider;
     this.bodyWriter = null;
   }
 
@@ -51,6 +65,7 @@ public final class Response
     this.contentLength = contentLength;
     this.encoding = null;
     this.content = null;
+    this.stringProvider = null;
     this.bodyWriter = bodyWriter;
   }
   
@@ -64,6 +79,11 @@ public final class Response
     return new Response(content, encoding);
   }
   
+  public static Response newDelayedStringResponse(StringProvider stringProvider)
+  {
+    return new Response(stringProvider);
+  }
+  
   public static Response newWritingResponse(long contentLength, String contentType, BodyWriter bodyWriter)
   {
     return new Response(contentLength, contentType, bodyWriter);
@@ -71,6 +91,11 @@ public final class Response
   
   public void write(AsynchronousSocketChannel asynchronousSocketChannel)
   {
+    if (stringProvider != null)
+    {
+      stringProvider.write(new AbstractStringResponse(asynchronousSocketChannel));
+      return;
+    }
     String head = "HTTP/1.1 ";
     head += status + "\r\n";
     head += "Content-Type: " + contentType;

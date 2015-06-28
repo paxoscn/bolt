@@ -13,15 +13,26 @@ import cn.paxos.bolt.responder.Responder;
 public class Server
 {
   
-  private static final int BUFFER_SIZE = 16 * 1024;
+  public static final int BUFFER_SIZE = 16 * 1024;
   private static final int threadPoolSize = Runtime.getRuntime().availableProcessors();
-
+  public static final AsynchronousChannelGroup asynchronousChannelGroup;
+  
   private int port;
   private List<Responder> responders;
   
+  static
+  {
+    try
+    {
+      asynchronousChannelGroup = AsynchronousChannelGroup.withCachedThreadPool(Executors.newCachedThreadPool(), threadPoolSize);
+    } catch (IOException e)
+    {
+      throw new RuntimeException(e);
+    }
+  }
+  
   public void start() throws IOException
   {
-    AsynchronousChannelGroup asynchronousChannelGroup = AsynchronousChannelGroup.withCachedThreadPool(Executors.newCachedThreadPool(), threadPoolSize);
     AsynchronousServerSocketChannel serverSocketChannel = AsynchronousServerSocketChannel.open(asynchronousChannelGroup);
     serverSocketChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
     serverSocketChannel.setOption(StandardSocketOptions.SO_RCVBUF, BUFFER_SIZE);

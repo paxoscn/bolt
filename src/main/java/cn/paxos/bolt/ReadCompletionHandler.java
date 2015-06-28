@@ -55,8 +55,9 @@ public class ReadCompletionHandler implements CompletionHandler<Integer, Session
   @Override
   public void failed(Throwable exc, Session session)
   {
-    System.err.println("Read failed");
-    exc.printStackTrace();
+    // TODO
+//    System.err.println("Read failed");
+//    exc.printStackTrace();
     try
     {
       session.getAsynchronousSocketChannel().close();

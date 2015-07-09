@@ -2,16 +2,30 @@ package cn.paxos.bolt;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.TimeZone;
 
 public class AbstractStringResponse implements StringResponse
 {
+
+  private static final DateFormat COOKIE_DATE_FORMAT = new SimpleDateFormat("d MMM yyyy HH:mm:ss z");
 
   private final AsynchronousSocketChannel asynchronousSocketChannel;
   
   private String status;
   private String contentType;
   private String encoding;
+  private List<String> cookies;
   private byte[] content;
+  
+  static
+  {
+    COOKIE_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT"));
+  }
 
   public AbstractStringResponse(
       AsynchronousSocketChannel asynchronousSocketChannel)
@@ -20,6 +34,7 @@ public class AbstractStringResponse implements StringResponse
     this.status = "200 OK";
     this.contentType = "text/html";
     this.encoding = "utf-8";
+    this.cookies = new LinkedList<String>();
     this.content = new byte[0];
   }
 
@@ -42,6 +57,12 @@ public class AbstractStringResponse implements StringResponse
   }
 
   @Override
+  public void addCookie(String key, String value, Date expire)
+  {
+    cookies.add(key + "=" + value + "; expires=" + COOKIE_DATE_FORMAT.format(expire) + "; path=/");
+  }
+
+  @Override
   public void setContent(byte[] content)
   {
     this.content = content;
@@ -58,6 +79,10 @@ public class AbstractStringResponse implements StringResponse
       head += "; charset=" + encoding;
     }
     head += "\r\n";
+    for (String cookie : cookies)
+    {
+      head += "Set-Cookie: " + cookie + "\r\n";
+    }
     int contentLength = content.length;
     head += "Content-Length: " + contentLength + "\r\n\r\n";
     byte[] headBytes = head.getBytes();
@@ -81,6 +106,11 @@ public class AbstractStringResponse implements StringResponse
       asynchronousSocketChannel.write(buffer);
       return;
     }
+  }
+  
+  public static void main(String[] args)
+  {
+    System.out.println(COOKIE_DATE_FORMAT.format(new Date()));
   }
 
 }

@@ -49,6 +49,10 @@ public class FileTransferer implements Responder
       return false;
     }
     String path = request.getPath();
+    if (path.equals("/"))
+    {
+      return true;
+    }
     int lastIndexOfDot = path.lastIndexOf('.');
     if (lastIndexOfDot < 0)
     {
@@ -62,6 +66,10 @@ public class FileTransferer implements Responder
   public Response handle(Request request)
   {
     String path = request.getPath();
+    if (path.equals("/"))
+    {
+      path = "/index.html";
+    }
     String filePath = base + path;
     final File file = new File(filePath);
     if (!file.exists())

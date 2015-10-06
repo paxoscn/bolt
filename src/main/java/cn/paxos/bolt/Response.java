@@ -5,19 +5,33 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.TimeZone;
 
 import cn.paxos.bolt.BodyWriter;
 
 public final class Response
 {
 
+  private static final DateFormat COOKIE_DATE_FORMAT = new SimpleDateFormat("d MMM yyyy HH:mm:ss z");
+
   private final String status;
   private final String contentType;
   private final long contentLength;
   private final String encoding;
+  private final List<String> cookies;
   private final byte[] content;
   private final StringProvider stringProvider;
   private final BodyWriter bodyWriter;
+  
+  static
+  {
+    COOKIE_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT"));
+  }
 
   private Response(int code, String message)
   {
@@ -25,6 +39,7 @@ public final class Response
     this.contentType = "text/html";
     this.contentLength = 0;
     this.encoding = "utf-8";
+    this.cookies = new LinkedList<String>();
     this.content = null;
     this.stringProvider = null;
     this.bodyWriter = null;
@@ -35,6 +50,7 @@ public final class Response
     this.status = "200 OK";
     this.contentType = "text/html";
     this.encoding = encoding;
+    this.cookies = new LinkedList<String>();
     try
     {
       this.content = content.getBytes(encoding);
@@ -53,6 +69,7 @@ public final class Response
     this.contentType = null;
     this.contentLength = 0;
     this.encoding = null;
+    this.cookies = new LinkedList<String>();
     this.content = null;
     this.stringProvider = stringProvider;
     this.bodyWriter = null;
@@ -64,6 +81,7 @@ public final class Response
     this.contentType = contentType;
     this.contentLength = contentLength;
     this.encoding = null;
+    this.cookies = new LinkedList<String>();
     this.content = null;
     this.stringProvider = null;
     this.bodyWriter = bodyWriter;
@@ -89,6 +107,11 @@ public final class Response
     return new Response(contentLength, contentType, bodyWriter);
   }
   
+  public void addCookie(String key, String value, Date expire)
+  {
+    cookies.add(key + "=" + value + "; expires=" + COOKIE_DATE_FORMAT.format(expire) + "; path=/");
+  }
+  
   public void write(AsynchronousSocketChannel asynchronousSocketChannel)
   {
     if (stringProvider != null)
@@ -104,6 +127,10 @@ public final class Response
       head += "; charset=" + encoding;
     }
     head += "\r\n";
+    for (String cookie : cookies)
+    {
+      head += "Set-Cookie: " + cookie + "\r\n";
+    }
     head += "Content-Length: " + contentLength + "\r\n\r\n";
     byte[] headBytes = head.getBytes();
     if (contentLength < 1)

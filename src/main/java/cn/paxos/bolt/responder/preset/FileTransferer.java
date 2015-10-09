@@ -86,33 +86,36 @@ public class FileTransferer implements Responder
           throws IOException
       {
         FileChannel fileChannel = FileChannel.open(file.toPath(), StandardOpenOption.READ);
-        fileChannel.transferTo(0, fileLength, new WritableByteChannel() {
-          @Override
-          public boolean isOpen()
-          {
-            return asynchronousSocketChannel.isOpen();
-          }
-          @Override
-          public void close() throws IOException
-          {
-            asynchronousSocketChannel.close();
-          }
-          @Override
-          public int write(ByteBuffer src) throws IOException
-          {
-            Future<Integer> future = asynchronousSocketChannel.write(src);
-            try
+        for (long transfered = 0; transfered < fileLength; )
+        {
+          transfered += fileChannel.transferTo(transfered, fileLength - transfered, new WritableByteChannel() {
+            @Override
+            public boolean isOpen()
             {
-              return future.get();
-            } catch (InterruptedException e)
-            {
-              throw new IOException(e);
-            } catch (ExecutionException e)
-            {
-              throw new IOException(e);
+              return asynchronousSocketChannel.isOpen();
             }
-          }
-        });
+            @Override
+            public void close() throws IOException
+            {
+              asynchronousSocketChannel.close();
+            }
+            @Override
+            public int write(ByteBuffer src) throws IOException
+            {
+              Future<Integer> future = asynchronousSocketChannel.write(src);
+              try
+              {
+                return future.get();
+              } catch (InterruptedException e)
+              {
+                throw new IOException(e);
+              } catch (ExecutionException e)
+              {
+                throw new IOException(e);
+              }
+            }
+          });
+        }
       }
     });
   }

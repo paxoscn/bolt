@@ -26,6 +26,7 @@ public class ServerTest
       o.write(buffer, 0, read);
     }
     System.out.println(new String(o.toByteArray(), "UTF-8"));
+    s.close();
   }
 
 }

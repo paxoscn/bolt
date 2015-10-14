@@ -87,6 +87,18 @@ public final class Response
     this.bodyWriter = bodyWriter;
   }
   
+  public Response(byte[] content, String contentType)
+  {
+    this.status = "200 OK";
+    this.contentType = contentType;
+    this.contentLength = content.length;
+    this.encoding = null;
+    this.cookies = new LinkedList<String>();
+    this.content = content;
+    this.stringProvider = null;
+    this.bodyWriter = null;
+  }
+
   public static Response newErrorResponse(int code, String message)
   {
     return new Response(code, message);
@@ -105,6 +117,11 @@ public final class Response
   public static Response newWritingResponse(long contentLength, String contentType, BodyWriter bodyWriter)
   {
     return new Response(contentLength, contentType, bodyWriter);
+  }
+
+  public static Response newBytesResponse(byte[] bytes, String contentType)
+  {
+    return new Response(bytes, contentType);
   }
   
   public void addCookie(String key, String value, Date expire)

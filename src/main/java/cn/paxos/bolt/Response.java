@@ -1,5 +1,7 @@
 package cn.paxos.bolt;
 
+import static cn.paxos.bolt.util.IOUtils.writeCompletely;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -10,6 +12,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
 
 import cn.paxos.bolt.BodyWriter;
@@ -17,7 +20,7 @@ import cn.paxos.bolt.BodyWriter;
 public final class Response
 {
 
-  private static final DateFormat COOKIE_DATE_FORMAT = new SimpleDateFormat("d MMM yyyy HH:mm:ss z");
+  private static final DateFormat COOKIE_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss z", Locale.ENGLISH);
 
   private final String status;
   private final String contentType;
@@ -163,10 +166,7 @@ public final class Response
       byte[] headAndBody = new byte[headBytes.length + content.length];
       System.arraycopy(headBytes, 0, headAndBody, 0, headBytes.length);
       System.arraycopy(content, 0, headAndBody, headBytes.length, content.length);
-      ByteBuffer buffer = ByteBuffer.allocate(headAndBody.length);
-      buffer.put(headAndBody);
-      buffer.rewind();
-      asynchronousSocketChannel.write(buffer);
+      writeCompletely(asynchronousSocketChannel, headAndBody);
       return;
     }
     ByteBuffer buffer = ByteBuffer.allocate(headBytes.length);

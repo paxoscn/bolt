@@ -1,5 +1,7 @@
 package cn.paxos.bolt;
 
+import static cn.paxos.bolt.util.IOUtils.writeCompletely;
+
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.text.DateFormat;
@@ -100,14 +102,11 @@ public class AbstractStringResponse implements StringResponse
       byte[] headAndBody = new byte[headBytes.length + content.length];
       System.arraycopy(headBytes, 0, headAndBody, 0, headBytes.length);
       System.arraycopy(content, 0, headAndBody, headBytes.length, content.length);
-      ByteBuffer buffer = ByteBuffer.allocate(headAndBody.length);
-      buffer.put(headAndBody);
-      buffer.rewind();
-      asynchronousSocketChannel.write(buffer);
+      writeCompletely(asynchronousSocketChannel, headAndBody);
       return;
     }
   }
-  
+
   public static void main(String[] args)
   {
     System.out.println(COOKIE_DATE_FORMAT.format(new Date()));

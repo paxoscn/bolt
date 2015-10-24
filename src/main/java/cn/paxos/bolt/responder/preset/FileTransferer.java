@@ -34,6 +34,7 @@ public class FileTransferer implements Responder
     mimeTypes.put("jpg", "image/jpeg");
     mimeTypes.put("png", "image/png");
     mimeTypes.put("gif", "image/gif");
+    mimeTypes.put("ico", "image/x-icon");
   }
 
   public FileTransferer(String base)
@@ -59,7 +60,7 @@ public class FileTransferer implements Responder
       return false;
     }
     String ext = path.substring(lastIndexOfDot + 1);
-    return ",htm,html,css,js,jpg,png,gif,".indexOf("," + ext + ",") > -1;
+    return ",htm,html,css,js,jpg,png,gif,ico,".indexOf("," + ext + ",") > -1;
   }
 
   @Override

@@ -14,8 +14,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.zip.GZIPOutputStream;
 
 import cn.paxos.bolt.BodyWriter;
+import cn.paxos.jam.util.LightByteArrayOutputStream;
 
 public final class Response
 {
@@ -26,6 +28,8 @@ public final class Response
   private final String contentType;
   private final long contentLength;
   private final String encoding;
+  private final String location;
+  private final boolean gzip;
   private final List<String> cookies;
   private final byte[] content;
   private final StringProvider stringProvider;
@@ -42,6 +46,8 @@ public final class Response
     this.contentType = "text/html";
     this.contentLength = 0;
     this.encoding = "utf-8";
+    this.location = null;
+    this.gzip = false;
     this.cookies = new LinkedList<String>();
     this.content = null;
     this.stringProvider = null;
@@ -53,6 +59,8 @@ public final class Response
     this.status = "200 OK";
     this.contentType = "text/html";
     this.encoding = encoding;
+    this.location = null;
+    this.gzip = false;
     this.cookies = new LinkedList<String>();
     try
     {
@@ -72,18 +80,22 @@ public final class Response
     this.contentType = null;
     this.contentLength = 0;
     this.encoding = null;
+    this.location = null;
+    this.gzip = false;
     this.cookies = new LinkedList<String>();
     this.content = null;
     this.stringProvider = stringProvider;
     this.bodyWriter = null;
   }
 
-  private Response(long contentLength, String contentType, BodyWriter bodyWriter)
+  private Response(boolean gzip, long contentLength, String contentType, BodyWriter bodyWriter)
   {
     this.status = "200 OK";
     this.contentType = contentType;
     this.contentLength = contentLength;
     this.encoding = null;
+    this.location = null;
+    this.gzip = gzip;
     this.cookies = new LinkedList<String>();
     this.content = null;
     this.stringProvider = null;
@@ -92,12 +104,40 @@ public final class Response
   
   public Response(byte[] content, String contentType)
   {
+    final LightByteArrayOutputStream baos = new LightByteArrayOutputStream();
+    try
+    {
+      final GZIPOutputStream gzipOutputStream = new GZIPOutputStream(baos);
+      gzipOutputStream.write(content);
+      gzipOutputStream.close();
+    } catch (IOException e)
+    {
+      // TODO Auto-generated catch block
+      throw new RuntimeException(e);
+    }
+    content = baos.toByteArray();
     this.status = "200 OK";
     this.contentType = contentType;
     this.contentLength = content.length;
     this.encoding = null;
+    this.location = null;
+    this.gzip = true;
     this.cookies = new LinkedList<String>();
     this.content = content;
+    this.stringProvider = null;
+    this.bodyWriter = null;
+  }
+
+  public Response(String path)
+  {
+    this.status = "301 Moved Permanently";
+    this.contentType = "text/html";
+    this.contentLength = 0;
+    this.encoding = null;
+    this.location = path;
+    this.gzip = false;
+    this.cookies = new LinkedList<String>();
+    this.content = null;
     this.stringProvider = null;
     this.bodyWriter = null;
   }
@@ -117,19 +157,24 @@ public final class Response
     return new Response(stringProvider);
   }
   
-  public static Response newWritingResponse(long contentLength, String contentType, BodyWriter bodyWriter)
+  public static Response newWritingResponse(boolean gzip, long contentLength, String contentType, BodyWriter bodyWriter)
   {
-    return new Response(contentLength, contentType, bodyWriter);
+    return new Response(gzip, contentLength, contentType, bodyWriter);
   }
 
   public static Response newBytesResponse(byte[] bytes, String contentType)
   {
     return new Response(bytes, contentType);
   }
+
+  public static Response newRedirectResponse(String path)
+  {
+    return new Response(path);
+  }
   
   public void addCookie(String key, String value, Date expire)
   {
-    cookies.add(key + "=" + value + "; expires=" + COOKIE_DATE_FORMAT.format(expire) + "; path=/");
+    cookies.add(key + "=" + value + (expire == null ? "" : ("; expires=" + COOKIE_DATE_FORMAT.format(expire))) + "; path=/");
   }
   
   public void write(AsynchronousSocketChannel asynchronousSocketChannel)
@@ -147,6 +192,14 @@ public final class Response
       head += "; charset=" + encoding;
     }
     head += "\r\n";
+    if (location != null)
+    {
+      head += "Location: " + location + "\r\n";
+    }
+    if (gzip)
+    {
+      head += "Content-Encoding: gzip\r\n";
+    }
     for (String cookie : cookies)
     {
       head += "Set-Cookie: " + cookie + "\r\n";

@@ -2,6 +2,7 @@ package cn.paxos.bolt;
 
 import static cn.paxos.bolt.util.IOUtils.writeCompletely;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.text.DateFormat;
@@ -10,6 +11,9 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.zip.GZIPOutputStream;
+
+import cn.paxos.jam.util.LightByteArrayOutputStream;
 
 public class AbstractStringResponse implements StringResponse
 {
@@ -81,11 +85,31 @@ public class AbstractStringResponse implements StringResponse
       head += "; charset=" + encoding;
     }
     head += "\r\n";
+    boolean gzip = true;
+    if (gzip)
+    {
+      head += "Content-Encoding: gzip\r\n";
+      if (content != null && content.length > 0)
+      {
+        final LightByteArrayOutputStream baos = new LightByteArrayOutputStream();
+        try
+        {
+          final GZIPOutputStream gzipOutputStream = new GZIPOutputStream(baos);
+          gzipOutputStream.write(content);
+          gzipOutputStream.close();
+        } catch (IOException e)
+        {
+          // TODO Auto-generated catch block
+          throw new RuntimeException(e);
+        }
+        content = baos.toByteArray();
+      }
+    }
     for (String cookie : cookies)
     {
       head += "Set-Cookie: " + cookie + "\r\n";
     }
-    int contentLength = content.length;
+    int contentLength = content == null ? 0 : content.length;
     head += "Content-Length: " + contentLength + "\r\n\r\n";
     byte[] headBytes = head.getBytes();
     if (contentLength < 1)

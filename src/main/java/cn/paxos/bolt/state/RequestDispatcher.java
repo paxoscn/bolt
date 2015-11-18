@@ -44,6 +44,7 @@ public class RequestDispatcher implements Trigger, State
       return this;
     }
     Request request = ((RequestCompletedEvent) event).getRequest();
+    System.out.println("path = " + request.getPath());
     Responder selectedResponder = new DefaultResponder();
     for (Responder responder : responders)
     {
